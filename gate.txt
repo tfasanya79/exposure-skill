@@ -1,2 +1,0 @@
-Refusing to run. The scope gate failed:
-  - target someone-else.com is not in the authorised target list

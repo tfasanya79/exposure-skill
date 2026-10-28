@@ -1,5 +1,7 @@
-__pycache__/
 *.pyc
-scope.json
-report.md
 .pytest_cache/
+__pycache__/
+gate*.txt
+report.md
+scope.json
+scope_expired.json
