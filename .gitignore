@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+scope.json
+report.md
+.pytest_cache/

@@ -1,0 +1,7 @@
+{
+  "authorised": true,
+  "authorisation_reference": "TICKET-1234 or contract reference",
+  "expires": "2026-12-31",
+  "targets": ["example.com"],
+  "notes": "Copy this file, record the real approval, and keep it with the report."
+}
