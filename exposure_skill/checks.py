@@ -123,9 +123,35 @@ def _dig(name, rtype):
 
 
 def dns_auth(domain):
-    findings, score, best = [], 0, 4
+    findings = []
 
     spf = [record for record in _dig(domain, "TXT") if record.startswith("v=spf1")]
+    dmarc = [record for record in _dig("_dmarc." + domain, "TXT") if record.startswith("v=DMARC1")]
+
+    policy = "none"
+    if dmarc:
+        for part in dmarc[0].split(";"):
+            if part.strip().startswith("p="):
+                policy = part.strip()[2:]
+
+    # A domain can deliberately send no mail. In that case v=spf1 -all plus a
+    # DMARC reject policy is the correct, complete posture, and missing DKIM or
+    # MX records are not findings. Detect that case before scoring.
+    no_send = False
+    if spf:
+        tokens = spf[0].split()[1:]
+        senders = [token for token in tokens if token not in ("-all", "~all", "all")]
+        no_send = not senders and "-all" in tokens
+
+    if no_send and policy in ("reject", "quarantine"):
+        findings.append(("ok", "SPF is v=spf1 -all, so no host is authorised to send"))
+        findings.append(("ok", "DMARC policy is %s" % policy))
+        findings.append(("ok", "DKIM and MX are not applicable, this domain sends and receives no mail"))
+        return _result("dns-auth", "A", findings,
+                       "No action. Keep the records in place and re-check after any mail integration.")
+
+    score, best = 0, 4
+
     if spf:
         score += 1
         findings.append(("ok", "SPF present: %s" % spf[0][:70]))
@@ -134,13 +160,8 @@ def dns_auth(domain):
     else:
         findings.append(("fail", "No SPF record, so anyone can send as this domain"))
 
-    dmarc = [record for record in _dig("_dmarc." + domain, "TXT") if record.startswith("v=DMARC1")]
     if dmarc:
         score += 1
-        policy = "none"
-        for part in dmarc[0].split(";"):
-            if part.strip().startswith("p="):
-                policy = part.strip()[2:]
         findings.append(("ok", "DMARC present with p=%s" % policy))
         if policy == "none":
             findings.append(("warn", "DMARC policy is none, so it only monitors"))

@@ -37,3 +37,23 @@ def test_expired_scope_blocks():
 
 def test_target_outside_scope_blocks():
     assert scope_mod.validate(base(), "someone-else.com")
+
+
+def test_no_send_posture_grades_a(monkeypatch=None):
+    from exposure_skill import checks
+
+    original = checks._dig
+
+    def fake(name, rtype):
+        if name == "quiet.example" and rtype == "TXT":
+            return ["v=spf1 -all"]
+        if name == "_dmarc.quiet.example" and rtype == "TXT":
+            return ["v=DMARC1; p=reject; rua=mailto:postmaster@quiet.example"]
+        return []
+
+    checks._dig = fake
+    try:
+        result = checks.dns_auth("quiet.example")
+    finally:
+        checks._dig = original
+    assert result["grade"] == "A", result
